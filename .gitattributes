@@ -1,0 +1,7 @@
+# Archivos binarios: git no debe convertir saltos de línea
+*.pdf  binary
+*.xlsx binary
+*.png  binary
+*.jpg  binary
+*.mp4  binary
+*.db   binary
