@@ -1,0 +1,714 @@
+{
+  "info": {
+    "_postman_id": "6f1c2a4e-9b7d-4c1e-8a3f-2d5e7b9c1a01",
+    "name": "QA Reports App - API REST",
+    "description": "Colección de pruebas de la API REST de QA Reports App.\n\nIncluye los endpoints de pruebas automáticas y registro manual de ejecuciones.\n\nEjecutar en orden (Runner o Newman):\n  newman run tests/postman_collection.json\n\nVariables: baseUrl (por defecto http://127.0.0.1:5000), email, password. La variable token se rellena automáticamente en el login exitoso.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5000",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "admin@test.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "SecurePassword123",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth - Login exitoso (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Content-Type es JSON\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"Respuesta contiene un token JWT válido\", function () {",
+              "    pm.expect(body).to.have.property(\"token\").that.is.a(\"string\");",
+              "    pm.expect(body.token.split(\".\")).to.have.lengthOf(3);",
+              "});",
+              "",
+              "pm.test(\"Respuesta contiene datos del usuario\", function () {",
+              "    pm.expect(body.user).to.eql({ name: \"Admin QA\", role: \"Lead QA\" });",
+              "});",
+              "",
+              "pm.test(\"Tiempo de respuesta menor a 2000 ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "",
+              "// Extrae el token a variables de colección y entorno para las siguientes peticiones.",
+              "if (body.token) {",
+              "    pm.collectionVariables.set(\"token\", body.token);",
+              "    if (pm.environment) { pm.environment.set(\"token\", body.token); }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Inicia sesión con credenciales válidas y guarda el token JWT en la variable {{token}}."
+      },
+      "response": []
+    },
+    {
+      "name": "Auth - Login fallido (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 401 Unauthorized\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"Mensaje de error es 'Credenciales inválidas'\", function () {",
+              "    pm.expect(body.error).to.eql(\"Credenciales inválidas\");",
+              "});",
+              "",
+              "pm.test(\"No se entrega token\", function () {",
+              "    pm.expect(body).to.not.have.property(\"token\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"PasswordIncorrecta\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Intento de login con contraseña incorrecta. En la consola del servidor debe aparecer [WARNING] ... INTENTO_FALLIDO_LOGIN."
+      },
+      "response": []
+    },
+    {
+      "name": "Dashboard - Métricas (Bearer Token, 200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"Contiene las métricas principales\", function () {",
+              "    [\"total_tests\", \"pass_rate\", \"bugs_found\", \"avg_response_time_ms\", \"recent_executions\"].forEach(function (key) {",
+              "        pm.expect(body).to.have.property(key);",
+              "    });",
+              "});",
+              "",
+              "pm.test(\"Pass Rate entre 0 y 100\", function () {",
+              "    pm.expect(body.pass_rate).to.be.within(0, 100);",
+              "});",
+              "",
+              "pm.test(\"Listado de ejecuciones recientes con estructura válida\", function () {",
+              "    pm.expect(body.recent_executions).to.be.an(\"array\");",
+              "    if (body.recent_executions.length) {",
+              "        pm.expect(body.recent_executions[0]).to.include.all.keys(\"run_id\", \"suite\", \"status\", \"executed_at\", \"trigger\");",
+              "    }",
+              "});",
+              "",
+              "pm.test(\"Incluye estado de la automatización\", function () {",
+              "    pm.expect(body.automation).to.include.all.keys(\"enabled\", \"interval_minutes\", \"running\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/dashboard/metrics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "dashboard",
+            "metrics"
+          ]
+        },
+        "description": "Endpoint protegido. Requiere Authorization: Bearer {{token}}."
+      },
+      "response": []
+    },
+    {
+      "name": "Dashboard - Métricas sin token (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 401 sin token\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test(\"Mensaje de error de autenticación\", function () {",
+              "    pm.expect(pm.response.json().error).to.eql(\"Token de autenticación requerido\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/dashboard/metrics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "dashboard",
+            "metrics"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pruebas - Ejecutar pruebas automáticas del sistema",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"Se generó un lote con casos ejecutados\", function () {",
+              "    pm.expect(body.batch_id).to.match(/^LOTE-/);",
+              "    pm.expect(body.total).to.be.above(0);",
+              "    pm.expect(body.passed + body.failed).to.eql(body.total);",
+              "});",
+              "",
+              "pm.test(\"Todos los casos automáticos pasaron\", function () {",
+              "    pm.expect(body.failed).to.eql(0);",
+              "});",
+              "",
+              "pm.test(\"Se registró una ejecución por suite\", function () {",
+              "    pm.expect(body.runs).to.be.an(\"array\").that.is.not.empty;",
+              "    body.runs.forEach(function (run) {",
+              "        pm.expect(run.run_id).to.match(/^RUN-/);",
+              "        pm.expect(run.trigger).to.eql(\"Manual\");",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/test-runs/execute",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "test-runs",
+            "execute"
+          ]
+        },
+        "description": "La aplicación ejecuta su batería de pruebas del sistema (login, seguridad, métricas, reportes y vistas) y registra los resultados. Devuelve 409 si ya hay un lote en curso."
+      },
+      "response": []
+    },
+    {
+      "name": "Pruebas - Registrar ejecución manual (201)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const run = pm.response.json();",
+              "",
+              "pm.test(\"Exitosas y pass rate calculados por el servidor\", function () {",
+              "    pm.expect(run.passed).to.eql(40);",
+              "    pm.expect(run.pass_rate).to.eql(80);",
+              "    pm.expect(run.status).to.eql(\"Failed\");",
+              "});",
+              "",
+              "pm.test(\"Origen es Registro manual\", function () {",
+              "    pm.expect(run.trigger).to.eql(\"Registro manual\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\n  \"suite\": \"Regresión\",\n  \"environment\": \"Staging\",\n  \"total\": 50,\n  \"failed\": 4,\n  \"skipped\": 6,\n  \"avg_response_ms\": 320,\n  \"duration_s\": 42.5\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/test-runs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "test-runs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pruebas - Registrar ejecución inválida (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 400 Bad Request\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Mensaje de validación\", function () {",
+              "    pm.expect(pm.response.json().error).to.include(\"no puede superar\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\n  \"suite\": \"Regresión\",\n  \"environment\": \"QA\",\n  \"total\": 5,\n  \"failed\": 9\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/test-runs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "test-runs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reportes - Exportar PDF",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Content-Type es application/pdf\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\");",
+              "});",
+              "",
+              "pm.test(\"Se descarga como adjunto reporte_pruebas.pdf\", function () {",
+              "    const disposition = pm.response.headers.get(\"Content-Disposition\");",
+              "    pm.expect(disposition).to.include(\"attachment\");",
+              "    pm.expect(disposition).to.include(\"reporte_pruebas.pdf\");",
+              "});",
+              "",
+              "pm.test(\"El archivo es un PDF válido (firma %PDF)\", function () {",
+              "    pm.expect(pm.response.text().substring(0, 4)).to.eql(\"%PDF\");",
+              "    pm.expect(pm.response.responseSize).to.be.above(1000);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/export?format=pdf",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reports",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "format",
+              "value": "pdf"
+            }
+          ]
+        },
+        "description": "Genera y descarga el informe ejecutivo en PDF."
+      },
+      "response": []
+    },
+    {
+      "name": "Reportes - Exportar Excel",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Content-Type es XLSX\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"spreadsheetml.sheet\");",
+              "});",
+              "",
+              "pm.test(\"Nombre de archivo reporte_pruebas.xlsx\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Disposition\")).to.include(\"reporte_pruebas.xlsx\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/export?format=excel",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reports",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "format",
+              "value": "excel"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reportes - Exportar CSV",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Content-Type es text/csv\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/csv\");",
+              "});",
+              "",
+              "pm.test(\"Cabecera del CSV correcta\", function () {",
+              "    const firstLine = pm.response.text().replace(/^\\uFEFF/, \"\").split(\"\\r\\n\")[0];",
+              "    pm.expect(firstLine).to.include(\"ID Ejecución\");",
+              "    pm.expect(firstLine).to.include(\"Pass Rate (%)\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/export?format=csv",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reports",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "format",
+              "value": "csv"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reportes - Formato inválido (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code es 400 Bad Request\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Mensaje de formato no soportado\", function () {",
+              "    pm.expect(pm.response.json().error).to.include(\"Formato no soportado\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/export?format=docx",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reports",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "format",
+              "value": "docx"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

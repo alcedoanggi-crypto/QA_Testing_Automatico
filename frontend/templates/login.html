@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión | QA Center</title>
+    <script>
+        // Si ya hay una sesión activa, ir directo al dashboard.
+        try { if (localStorage.getItem("qa_token")) { window.location.replace("/dashboard"); } } catch (e) {}
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="login-page">
+    <main class="login-wrapper">
+        <section class="login-card" aria-labelledby="login-title">
+            <div class="brand">
+                <span class="brand-logo" aria-hidden="true">QA</span>
+                <div>
+                    <h1 id="login-title">QA Center</h1>
+                    <p class="muted">Pruebas, errores de consola y novedades para desarrollo</p>
+                </div>
+            </div>
+
+            <form id="login-form" novalidate>
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <input id="email" name="email" type="email" placeholder="admin@test.com"
+                           value="{{ demo_email }}"
+                           autocomplete="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <div class="password-field">
+                        <input id="password" name="password" type="password" placeholder="••••••••"
+                               value="{{ demo_password }}"
+                               autocomplete="current-password" required>
+                        <button type="button" id="btn-toggle-password" class="btn-link"
+                                aria-label="Mostrar contraseña">Mostrar</button>
+                    </div>
+                </div>
+
+                <div id="login-error-msg" class="alert alert-error" role="alert" aria-live="assertive" hidden></div>
+
+                <button id="btn-login" type="submit" class="btn btn-primary btn-block">
+                    <span class="btn-label">Iniciar sesión</span>
+                </button>
+            </form>
+
+            <p class="hint muted">Demo: <code>admin@test.com</code> / <code>SecurePassword123</code></p>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Center</title>
+    <script>
+        // Protección de ruta: sin token no se renderiza el dashboard.
+        (function () {
+            var token = null;
+            try { token = localStorage.getItem("qa_token"); } catch (e) {}
+            if (!token) { window.location.replace("/login"); }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="dashboard-page">
+    <header class="topbar">
+        <div class="brand">
+            <button id="btn-menu" type="button" class="btn-icon menu-toggle" aria-label="Abrir menú" aria-controls="sidenav" aria-expanded="false">☰</button>
+            <span class="brand-logo" aria-hidden="true">QA</span>
+            <h1>QA Center</h1>
+        </div>
+        <div class="topbar-actions">
+            <div class="user-info">
+                <span id="user-name">—</span>
+                <span id="user-role" class="muted"></span>
+            </div>
+            <button id="btn-logout" type="button" class="btn btn-outline">Cerrar sesión</button>
+        </div>
+    </header>
+
+    <div class="app-shell">
+        <nav id="sidenav" class="sidenav" aria-label="Menú principal">
+            <a href="#resumen" data-nav="resumen"><span class="nav-ico">▦</span>Resumen</a>
+            <p class="nav-group">Pruebas</p>
+            <a href="#analizador" data-nav="analizador"><span class="nav-ico">⌕</span>Analizar URL</a>
+            <a href="#resultados" data-nav="resultados"><span class="nav-ico">✎</span>Resultados Postman / Selenium</a>
+            <a href="#automaticas" data-nav="automaticas"><span class="nav-ico">↻</span>Pruebas automáticas</a>
+            <p class="nav-group">Documentación QA</p>
+            <a href="#plan" data-nav="plan"><span class="nav-ico">☰</span>Plan de pruebas</a>
+            <a href="#casos" data-nav="casos"><span class="nav-ico">☑</span>Casos de prueba</a>
+            <a href="#trazabilidad" data-nav="trazabilidad"><span class="nav-ico">⇄</span>Matriz de trazabilidad</a>
+            <a href="#defectos" data-nav="defectos"><span class="nav-ico">✱</span>Reporte de defectos</a>
+            <p class="nav-group">Seguimiento</p>
+            <a href="#novedades" data-nav="novedades"><span class="nav-ico">⚑</span>Novedades <span id="nav-open-incidents" class="nav-badge" hidden></span></a>
+            <a href="#programadores" data-nav="programadores"><span class="nav-ico">☺</span>Programadores</a>
+            <a href="#aplicaciones" data-nav="aplicaciones"><span class="nav-ico">◎</span>Aplicaciones</a>
+            <p class="nav-group">Sistema</p>
+            <a href="#reportes" data-nav="reportes"><span class="nav-ico">⇩</span>Reportes</a>
+            <a href="#configuracion" data-nav="configuracion"><span class="nav-ico">⚙</span>Configuración</a>
+        </nav>
+
+        <main class="content">
+            <div id="dashboard-error" class="alert alert-error" role="alert" hidden></div>
+
+            <!-- ============================================================ RESUMEN -->
+            <section id="view-resumen" class="view" data-view="resumen">
+                <div class="section-header">
+                    <div>
+                        <h2>Resumen</h2>
+                        <p class="muted">Última actualización: <span id="last-updated">—</span></p>
+                    </div>
+                    <button id="btn-refresh" type="button" class="btn btn-outline">Actualizar</button>
+                </div>
+
+                <section class="cards" aria-label="Métricas principales">
+                    <article id="card-total-tests" class="card">
+                        <p class="card-label">Pruebas ejecutadas</p>
+                        <p class="card-value" id="value-total-tests">—</p>
+                        <p class="card-sub muted"><span id="value-total-executions">—</span> ejecuciones</p>
+                    </article>
+                    <article id="card-pass-rate" class="card card-success">
+                        <p class="card-label">Pass Rate</p>
+                        <p class="card-value" id="value-pass-rate">—</p>
+                        <div class="progress" aria-hidden="true"><div id="pass-rate-bar" class="progress-bar"></div></div>
+                    </article>
+                    <article id="card-bugs-found" class="card card-danger">
+                        <p class="card-label">Pruebas fallidas</p>
+                        <p class="card-value" id="value-bugs-found">—</p>
+                        <p class="card-sub muted"><span id="value-skipped">—</span> pruebas omitidas</p>
+                    </article>
+                    <article id="card-avg-response" class="card card-info">
+                        <p class="card-label">Tiempo de respuesta prom.</p>
+                        <p class="card-value" id="value-avg-response">—</p>
+                        <p class="card-sub muted">milisegundos</p>
+                    </article>
+                    <article id="card-open-incidents" class="card card-warning">
+                        <p class="card-label">Novedades abiertas</p>
+                        <p class="card-value" id="value-open-incidents">—</p>
+                        <p class="card-sub muted"><span id="value-unassigned">—</span> sin asignar</p>
+                    </article>
+                    <article id="card-high-incidents" class="card card-danger">
+                        <p class="card-label">Críticas / altas abiertas</p>
+                        <p class="card-value" id="value-high-incidents">—</p>
+                        <p class="card-sub muted">requieren atención</p>
+                    </article>
+                    <article id="card-scans" class="card card-info">
+                        <p class="card-label">Análisis de URL</p>
+                        <p class="card-value" id="value-scans">—</p>
+                        <p class="card-sub muted"><span id="value-scan-issues">—</span> errores detectados</p>
+                    </article>
+                    <article id="card-resolved" class="card card-success">
+                        <p class="card-label">Novedades resueltas</p>
+                        <p class="card-value" id="value-resolved">—</p>
+                        <p class="card-sub muted">resueltas, verificadas o cerradas</p>
+                    </article>
+                </section>
+
+                <section class="panel docs-progress">
+                    <div class="panel-title-row">
+                        <h3>Avance de la documentación QA</h3>
+                        <a href="#casos" class="link-small">Ver casos</a>
+                    </div>
+                    <div class="progress-grid">
+                        <div><span class="muted small">Casos ejecutados</span><strong id="docs-execution">—</strong><div class="progress"><div id="docs-execution-bar" class="progress-bar progress-info"></div></div></div>
+                        <div><span class="muted small">Casos aprobados (pass rate)</span><strong id="docs-pass">—</strong><div class="progress"><div id="docs-pass-bar" class="progress-bar"></div></div></div>
+                        <div><span class="muted small">Cobertura de requisitos</span><strong id="docs-coverage">—</strong><div class="progress"><div id="docs-coverage-bar" class="progress-bar progress-warning"></div></div></div>
+                        <div><span class="muted small">Estado de los casos</span><div id="docs-statuses" class="pill-row tight"></div></div>
+                    </div>
+                </section>
+
+                <section class="grid-2">
+                    <article class="panel">
+                        <h3>Resultados por suite</h3>
+                        <div class="chart-legend">
+                            <span><i class="legend-dot legend-pass"></i>Exitosas</span>
+                            <span><i class="legend-dot legend-fail"></i>Fallidas</span>
+                            <span><i class="legend-dot legend-skip"></i>Omitidas</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-suites" aria-label="Gráfico de resultados por suite" role="img"></canvas>
+                            <p id="chart-empty" class="chart-empty muted" hidden>Sin datos todavía</p>
+                        </div>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-title-row">
+                            <h3>Novedades prioritarias</h3>
+                            <a href="#novedades" class="link-small">Ver todas</a>
+                        </div>
+                        <ul id="priority-incidents" class="mini-list"><li class="muted small">Cargando…</li></ul>
+                    </article>
+                </section>
+
+                <section class="panel">
+                    <div class="section-header">
+                        <h3>Ejecuciones recientes</h3>
+                        <span class="muted"><span id="table-count">0</span> resultados</span>
+                    </div>
+                    <div class="filters">
+                        <input id="filter-search" type="search" placeholder="Buscar por ID, suite, herramienta o responsable…"
+                               aria-label="Buscar ejecuciones">
+                        <select id="filter-suite" aria-label="Filtrar por suite">
+                            <option value="">Todas las suites</option>
+                        </select>
+                        <select id="filter-status" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            <option value="Passed">Passed</option>
+                            <option value="Failed">Failed</option>
+                        </select>
+                        <select id="filter-environment" aria-label="Filtrar por ambiente">
+                            <option value="">Todos los ambientes</option>
+                        </select>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="table-test-runs">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Suite</th>
+                                    <th>Herramienta</th>
+                                    <th>Ambiente</th>
+                                    <th>Estado</th>
+                                    <th class="num">Total</th>
+                                    <th class="num">Exitosas</th>
+                                    <th class="num">Fallidas</th>
+                                    <th class="num">Pass Rate</th>
+                                    <th class="num">Resp. (ms)</th>
+                                    <th>Ejecutado por</th>
+                                    <th>Origen</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-test-runs-body">
+                                <tr><td colspan="13" class="empty">Cargando ejecuciones…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ ANALIZADOR DE URL -->
+            <section id="view-analizador" class="view" data-view="analizador" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Analizar URL</h2>
+                        <p class="muted">Abre la aplicación en Chrome y captura los errores de la consola, excepciones de JavaScript y peticiones fallidas.</p>
+                    </div>
+                </div>
+
+                <section class="panel">
+                    <form id="form-scan" class="scan-form" novalidate>
+                        <div class="form-group scan-url">
+                            <label for="scan-url">URL de la aplicación</label>
+                            <input id="scan-url" type="text" list="scan-url-options" placeholder="http://localhost:3000" autocomplete="url" required>
+                            <datalist id="scan-url-options"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="scan-target">Aplicación registrada</label>
+                            <select id="scan-target"><option value="">— Ninguna —</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="scan-pages">Páginas a recorrer</label>
+                            <input id="scan-pages" type="number" min="1" max="20" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="scan-wait">Espera tras cargar (s)</label>
+                            <input id="scan-wait" type="number" min="0" max="30" step="0.5" value="2">
+                        </div>
+                        <div class="form-group scan-actions">
+                            <label class="check"><input id="scan-auto" type="checkbox" checked> Crear novedades automáticamente</label>
+                            <button id="btn-scan" type="submit" class="btn btn-primary"><span class="btn-label">Analizar</span></button>
+                        </div>
+                    </form>
+                    <p id="scan-msg" class="form-msg" role="status" aria-live="polite"></p>
+                </section>
+
+                <section id="scan-result" class="panel" hidden>
+                    <div class="section-header">
+                        <div>
+                            <h3 id="scan-result-title">Resultado</h3>
+                            <p id="scan-result-meta" class="muted small"></p>
+                        </div>
+                        <div class="header-actions">
+                            <button id="btn-scan-pdf" type="button" class="btn btn-outline btn-sm"><span class="badge badge-pdf">PDF</span> Reporte</button>
+                            <button id="btn-scan-excel" type="button" class="btn btn-outline btn-sm"><span class="badge badge-excel">XLSX</span></button>
+                            <span id="scan-result-status" class="pill"></span>
+                        </div>
+                    </div>
+                    <div class="scan-summary">
+                        <div class="stat"><span class="stat-value" id="scan-stat-errors">0</span><span class="stat-label">Errores JS / consola</span></div>
+                        <div class="stat"><span class="stat-value" id="scan-stat-network">0</span><span class="stat-label">Errores de red</span></div>
+                        <div class="stat"><span class="stat-value" id="scan-stat-warnings">0</span><span class="stat-label">Advertencias</span></div>
+                        <div class="stat"><span class="stat-value" id="scan-stat-http">—</span><span class="stat-label">HTTP</span></div>
+                        <div class="stat"><span class="stat-value" id="scan-stat-load">—</span><span class="stat-label">Carga (ms)</span></div>
+                    </div>
+                    <p id="scan-result-message" class="muted small"></p>
+                    <div class="scan-body">
+                        <div class="scan-issues">
+                            <div class="bulk-bar">
+                                <label class="check"><input id="scan-select-all" type="checkbox"> Seleccionar todo</label>
+                                <select id="scan-assign-dev" aria-label="Asignar a programador"><option value="">Asignar a…</option></select>
+                                <label class="check"><input id="scan-notify" type="checkbox"> Enviar al programador</label>
+                                <button id="btn-scan-incidents" type="button" class="btn btn-primary btn-sm">Crear novedades</button>
+                            </div>
+                            <div class="table-wrapper">
+                                <table id="table-scan-issues" class="table-wrap">
+                                    <thead><tr><th></th><th>Tipo</th><th>Mensaje</th><th>Página / recurso</th><th>Novedad</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <figure id="scan-shot" class="scan-shot" hidden>
+                            <img id="scan-shot-img" alt="Captura de la página analizada">
+                            <figcaption class="muted small">Captura de la primera página</figcaption>
+                        </figure>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="section-header">
+                        <h3>Historial de análisis</h3>
+                        <button id="btn-scans-refresh" type="button" class="btn btn-outline btn-sm">Actualizar</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="table-scans">
+                            <thead><tr><th>ID</th><th>URL</th><th>Aplicación</th><th>Estado</th><th class="num">Errores</th><th class="num">Red</th><th class="num">Advert.</th><th>Origen</th><th>Fecha</th><th></th></tr></thead>
+                            <tbody><tr><td colspan="10" class="empty">Sin análisis todavía.</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ RESULTADOS EXTERNOS -->
+            <section id="view-resultados" class="view" data-view="resultados" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Resultados de pruebas</h2>
+                        <p class="muted">Registra o importa los resultados de las pruebas que haces en Postman, Selenium u otras herramientas.</p>
+                    </div>
+                </div>
+
+                <div class="grid-form">
+                    <section id="panel-register" class="panel">
+                        <div class="panel-title-row">
+                            <h3 id="register-title">Registrar resultado</h3>
+                            <button id="btn-cancel-edit" type="button" class="btn-link" hidden>Cancelar edición</button>
+                        </div>
+                        <form id="form-register-run" novalidate>
+                            <input id="run-edit-id" type="hidden">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="run-tool">Herramienta</label>
+                                    <select id="run-tool"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-environment">Ambiente</label>
+                                    <select id="run-environment"></select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="run-suite">Suite / colección</label>
+                                <input id="run-suite" type="text" list="suite-options" maxlength="40"
+                                       placeholder="Ej.: Regresión, API Pagos…" required>
+                                <datalist id="suite-options"></datalist>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="run-module">Módulo</label>
+                                    <input id="run-module" type="text" maxlength="80" placeholder="Ej.: Facturación">
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-executed-at">Fecha de ejecución</label>
+                                    <input id="run-executed-at" type="datetime-local">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="run-url">URL probada</label>
+                                <input id="run-url" type="text" maxlength="500" placeholder="http://localhost:3000/api">
+                            </div>
+                            <div class="form-grid form-grid-3">
+                                <div class="form-group">
+                                    <label for="run-total">Total</label>
+                                    <input id="run-total" type="number" min="1" step="1" value="10" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-failed">Fallidas</label>
+                                    <input id="run-failed" type="number" min="0" step="1" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-skipped">Omitidas</label>
+                                    <input id="run-skipped" type="number" min="0" step="1" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-response">Resp. (ms)</label>
+                                    <input id="run-response" type="number" min="0" step="1" value="250">
+                                </div>
+                                <div class="form-group">
+                                    <label for="run-duration">Duración (s)</label>
+                                    <input id="run-duration" type="number" min="0" step="0.1" value="5">
+                                </div>
+                                <div class="form-group">
+                                    <label>Exitosas</label>
+                                    <p id="run-passed-preview" class="computed">10</p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="run-notes">Observaciones / errores encontrados</label>
+                                <textarea id="run-notes" rows="3" maxlength="4000" placeholder="Describe lo que falló, mensajes de error, datos usados…"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="run-evidence">Enlace a evidencia (opcional)</label>
+                                <input id="run-evidence" type="text" maxlength="500" placeholder="Carpeta compartida, video, captura…">
+                            </div>
+                            <div id="run-incident-row" class="form-group">
+                                <label class="check"><input id="run-create-incident" type="checkbox"> Si hay fallidas, crear una novedad para:</label>
+                                <select id="run-incident-dev" aria-label="Programador para la novedad"><option value="">Sin asignar</option></select>
+                            </div>
+                            <p id="register-run-msg" class="form-msg" role="status" aria-live="polite"></p>
+                            <button id="btn-register-run" type="submit" class="btn btn-primary btn-block">
+                                <span class="btn-label">Registrar resultado</span>
+                            </button>
+                        </form>
+                    </section>
+
+                    <div>
+                        <section class="panel">
+                            <h3>Importar archivo de resultados</h3>
+                            <p class="muted small">Postman: <code>newman run coleccion.json -r json --reporter-json-export resultado.json</code><br>
+                                Selenium / pytest: <code>pytest --junitxml=resultado.xml</code> · Cypress y Playwright: reporte JUnit.</p>
+                            <form id="form-import" class="import-form" novalidate>
+                                <div class="form-group">
+                                    <label for="import-file">Archivo (.json de Newman o .xml JUnit)</label>
+                                    <input id="import-file" type="file" accept=".json,.xml" required>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="import-tool">Herramienta (XML)</label>
+                                        <select id="import-tool"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="import-environment">Ambiente</label>
+                                        <select id="import-environment"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="import-suite">Suite (opcional)</label>
+                                        <input id="import-suite" type="text" maxlength="40" placeholder="Se toma del archivo">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="import-dev">Asignar fallas a</label>
+                                        <select id="import-dev"><option value="">Sin asignar</option></select>
+                                    </div>
+                                </div>
+                                <label class="check"><input id="import-incidents" type="checkbox" checked> Crear una novedad por cada caso fallido</label>
+                                <p id="import-msg" class="form-msg" role="status" aria-live="polite"></p>
+                                <button id="btn-import" type="submit" class="btn btn-outline btn-block"><span class="btn-label">Importar</span></button>
+                            </form>
+                        </section>
+
+                        <section class="panel">
+                            <div class="section-header">
+                                <h3>Resultados registrados</h3>
+                                <select id="results-filter-origin" aria-label="Filtrar por origen" class="select-sm">
+                                    <option value="external">Registrados e importados</option>
+                                    <option value="all">Todos (incluye automáticos)</option>
+                                </select>
+                            </div>
+                            <input id="results-search" type="search" placeholder="Buscar suite, herramienta, módulo…" aria-label="Buscar resultados" class="search-block">
+                            <div class="table-wrapper">
+                                <table id="table-results">
+                                    <thead><tr><th>ID</th><th>Herramienta</th><th>Suite</th><th>Estado</th><th class="num">Exitosas</th><th class="num">Fallidas</th><th>Fecha</th><th class="actions-col">Acciones</th></tr></thead>
+                                    <tbody><tr><td colspan="8" class="empty">Cargando…</td></tr></tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ PRUEBAS AUTOMÁTICAS -->
+            <section id="view-automaticas" class="view" data-view="automaticas" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Pruebas automáticas del sistema</h2>
+                        <p class="muted">QA Center se prueba a sí mismo periódicamente y registra los resultados.</p>
+                    </div>
+                </div>
+                <section id="panel-automation" class="panel">
+                    <div class="panel-title-row">
+                        <h3>Estado</h3>
+                        <span id="automation-badge" class="pill">—</span>
+                    </div>
+                    <p id="automation-info" class="muted small">Cargando estado…</p>
+                    <button id="btn-run-tests" type="button" class="btn btn-primary">
+                        <span class="btn-label">Ejecutar pruebas ahora</span>
+                    </button>
+                    <p id="run-tests-status" class="form-msg" role="status" aria-live="polite"></p>
+
+                    <div id="last-run" class="last-run" hidden>
+                        <div class="last-run-header">
+                            <strong>Última ejecución</strong>
+                            <span id="last-run-date" class="muted small"></span>
+                        </div>
+                        <p id="last-run-meta" class="muted small"></p>
+                        <div class="last-run-stats">
+                            <span id="last-run-passed" class="pill pill-success"></span>
+                            <span id="last-run-failed" class="pill pill-danger"></span>
+                        </div>
+                        <ul id="last-run-cases" class="case-list"></ul>
+                    </div>
+                    <p id="last-run-empty" class="muted small empty-note" hidden>
+                        Aún no se han ejecutado pruebas automáticas.
+                    </p>
+                </section>
+            </section>
+
+            <!-- ============================================================ NOVEDADES -->
+            <section id="view-novedades" class="view" data-view="novedades" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Novedades</h2>
+                        <p class="muted">Errores y hallazgos para los programadores: asigna, envía y da seguimiento.</p>
+                    </div>
+                    <button id="btn-new-incident" type="button" class="btn btn-primary">+ Nueva novedad</button>
+                </div>
+                <section class="panel">
+                    <div class="status-tabs" id="incident-status-tabs" role="group" aria-label="Filtrar por estado"></div>
+                    <div class="filters filters-5">
+                        <input id="inc-search" type="search" placeholder="Buscar código, título, módulo, URL…" aria-label="Buscar novedades">
+                        <select id="inc-filter-severity" aria-label="Severidad"><option value="">Toda severidad</option></select>
+                        <select id="inc-filter-developer" aria-label="Programador"><option value="">Todos los programadores</option></select>
+                        <select id="inc-filter-source" aria-label="Origen"><option value="">Todo origen</option></select>
+                        <select id="inc-filter-environment" aria-label="Ambiente"><option value="">Todo ambiente</option></select>
+                    </div>
+                    <div id="inc-bulk" class="bulk-bar" hidden>
+                        <strong><span id="inc-selected-count">0</span> seleccionadas</strong>
+                        <select id="inc-bulk-dev" aria-label="Asignar a"><option value="">Asignar a…</option></select>
+                        <select id="inc-bulk-status" aria-label="Cambiar estado"><option value="">Cambiar estado…</option></select>
+                        <button id="btn-inc-bulk-notify" type="button" class="btn btn-outline btn-sm">Enviar a programadores</button>
+                        <button id="btn-inc-bulk-delete" type="button" class="btn btn-danger btn-sm">Eliminar</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="table-incidents">
+                            <thead><tr><th><input id="inc-select-all" type="checkbox" aria-label="Seleccionar todas"></th><th>Código</th><th>Título</th><th>Severidad</th><th>Estado</th><th>Asignado a</th><th>Origen</th><th>Creada</th><th class="actions-col">Acciones</th></tr></thead>
+                            <tbody><tr><td colspan="9" class="empty">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <p class="muted small table-foot"><span id="inc-count">0</span> novedades</p>
+                </section>
+            </section>
+
+            <!-- ============================================================ PROGRAMADORES -->
+            <section id="view-programadores" class="view" data-view="programadores" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Programadores</h2>
+                        <p class="muted">Equipo de desarrollo que recibe las novedades.</p>
+                    </div>
+                </div>
+                <div class="grid-form">
+                    <section class="panel">
+                        <div class="panel-title-row">
+                            <h3 id="dev-form-title">Nuevo programador</h3>
+                            <button id="btn-dev-cancel" type="button" class="btn-link" hidden>Cancelar edición</button>
+                        </div>
+                        <form id="form-developer" novalidate>
+                            <input id="dev-id" type="hidden">
+                            <div class="form-group"><label for="dev-name">Nombre</label><input id="dev-name" type="text" maxlength="80" required></div>
+                            <div class="form-group"><label for="dev-email">Correo</label><input id="dev-email" type="email" maxlength="120" required></div>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="dev-area">Área / equipo</label><input id="dev-area" type="text" maxlength="80" placeholder="Frontend, Backend…"></div>
+                                <div class="form-group"><label for="dev-phone">Teléfono</label><input id="dev-phone" type="text" maxlength="40"></div>
+                            </div>
+                            <label class="check"><input id="dev-active" type="checkbox" checked> Activo</label>
+                            <p id="dev-msg" class="form-msg" role="status" aria-live="polite"></p>
+                            <button id="btn-dev-save" type="submit" class="btn btn-primary btn-block"><span class="btn-label">Guardar</span></button>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <h3>Equipo</h3>
+                        <div class="table-wrapper">
+                            <table id="table-developers">
+                                <thead><tr><th>Nombre</th><th>Correo</th><th>Área</th><th class="num">Abiertas</th><th class="num">Total</th><th>Estado</th><th class="actions-col">Acciones</th></tr></thead>
+                                <tbody><tr><td colspan="7" class="empty">Cargando…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <!-- ============================================================ APLICACIONES -->
+            <section id="view-aplicaciones" class="view" data-view="aplicaciones" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Aplicaciones</h2>
+                        <p class="muted">URLs que pruebas con frecuencia. Las marcadas con «Monitorear» se analizan solas.</p>
+                    </div>
+                    <button id="btn-monitor-run" type="button" class="btn btn-outline">Monitorear ahora</button>
+                </div>
+                <p id="monitor-info" class="muted small monitor-info"></p>
+                <div class="grid-form">
+                    <section class="panel">
+                        <div class="panel-title-row">
+                            <h3 id="target-form-title">Nueva aplicación</h3>
+                            <button id="btn-target-cancel" type="button" class="btn-link" hidden>Cancelar edición</button>
+                        </div>
+                        <form id="form-target" novalidate>
+                            <input id="target-id" type="hidden">
+                            <div class="form-group"><label for="target-name">Nombre</label><input id="target-name" type="text" maxlength="80" required placeholder="Ej.: Facturación web"></div>
+                            <div class="form-group"><label for="target-url">URL</label><input id="target-url" type="text" maxlength="500" required placeholder="http://localhost:3000"></div>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="target-environment">Ambiente</label><select id="target-environment"></select></div>
+                                <div class="form-group"><label for="target-pages">Páginas a recorrer</label><input id="target-pages" type="number" min="1" max="20" value="3"></div>
+                            </div>
+                            <div class="form-group"><label for="target-developer">Programador responsable</label><select id="target-developer"><option value="">Sin asignar</option></select></div>
+                            <div class="form-group"><label for="target-notes">Notas</label><textarea id="target-notes" rows="2" maxlength="1000"></textarea></div>
+                            <label class="check"><input id="target-monitor" type="checkbox" checked> Monitorear automáticamente</label>
+                            <p id="target-msg" class="form-msg" role="status" aria-live="polite"></p>
+                            <button id="btn-target-save" type="submit" class="btn btn-primary btn-block"><span class="btn-label">Guardar</span></button>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <h3>Aplicaciones registradas</h3>
+                        <div class="table-wrapper">
+                            <table id="table-targets">
+                                <thead><tr><th>Nombre</th><th>URL</th><th>Responsable</th><th>Monitoreo</th><th>Último análisis</th><th class="actions-col">Acciones</th></tr></thead>
+                                <tbody><tr><td colspan="6" class="empty">Cargando…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <!-- ============================================================ PLAN DE PRUEBAS -->
+            <section id="view-plan" class="view" data-view="plan" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Plan de pruebas</h2>
+                        <p class="muted">Alcance, funciones a evaluar, criterios de aceptación, recursos y cronograma.</p>
+                    </div>
+                    <button id="btn-new-plan" type="button" class="btn btn-primary">+ Nuevo plan</button>
+                </div>
+                <div id="plan-list" class="plan-list"><p class="muted">Cargando…</p></div>
+            </section>
+
+            <!-- ============================================================ CASOS DE PRUEBA -->
+            <section id="view-casos" class="view" data-view="casos" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Casos de prueba</h2>
+                        <p class="muted">Precondiciones, datos de entrada, pasos, resultado esperado vs. obtenido y evidencias.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="btn-cases-pdf" type="button" class="btn btn-outline btn-sm"><span class="badge badge-pdf">PDF</span></button>
+                        <button id="btn-cases-excel" type="button" class="btn btn-outline btn-sm"><span class="badge badge-excel">XLSX</span></button>
+                        <button id="btn-new-case" type="button" class="btn btn-primary">+ Nuevo caso</button>
+                    </div>
+                </div>
+                <section class="panel">
+                    <div id="case-stats" class="mini-stats"></div>
+                    <div class="filters filters-5">
+                        <input id="case-search" type="search" placeholder="Buscar ID, título, módulo…" aria-label="Buscar casos">
+                        <select id="case-filter-plan" aria-label="Plan"><option value="">Todos los planes</option></select>
+                        <select id="case-filter-status" aria-label="Estado"><option value="">Todo estado</option></select>
+                        <select id="case-filter-type" aria-label="Tipo"><option value="">Todo tipo</option></select>
+                        <select id="case-filter-requirement" aria-label="Requisito"><option value="">Todo requisito</option></select>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="table-cases">
+                            <thead><tr><th>ID</th><th>Caso de prueba</th><th>Requisitos</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th class="num">Evid.</th><th>Defecto</th><th class="actions-col">Acciones</th></tr></thead>
+                            <tbody><tr><td colspan="9" class="empty">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ MATRIZ DE TRAZABILIDAD -->
+            <section id="view-trazabilidad" class="view" data-view="trazabilidad" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Matriz de trazabilidad (RTM)</h2>
+                        <p class="muted">Vincula requisitos e historias de usuario con sus casos de prueba para que ninguna funcionalidad quede sin validar.</p>
+                    </div>
+                    <div class="header-actions">
+                        <select id="rtm-plan" aria-label="Plan" class="select-sm"><option value="">Todos los planes</option></select>
+                        <button id="btn-rtm-pdf" type="button" class="btn btn-outline btn-sm"><span class="badge badge-pdf">PDF</span></button>
+                        <button id="btn-rtm-excel" type="button" class="btn btn-outline btn-sm"><span class="badge badge-excel">XLSX</span></button>
+                    </div>
+                </div>
+                <div id="rtm-stats" class="mini-stats"></div>
+                <div class="grid-form">
+                    <section class="panel">
+                        <div class="panel-title-row">
+                            <h3 id="req-form-title">Nuevo requisito</h3>
+                            <button id="btn-req-cancel" type="button" class="btn-link" hidden>Cancelar edición</button>
+                        </div>
+                        <form id="form-requirement" novalidate>
+                            <input id="req-id" type="hidden">
+                            <div class="form-grid">
+                                <div class="form-group"><label for="req-code">Código</label><input id="req-code" type="text" maxlength="30" placeholder="HU-01 (automático si vacío)"></div>
+                                <div class="form-group"><label for="req-kind">Tipo</label><select id="req-kind"></select></div>
+                            </div>
+                            <div class="form-group"><label for="req-title">Título</label><input id="req-title" type="text" maxlength="200" required placeholder="Como usuario quiero…"></div>
+                            <div class="form-group"><label for="req-description">Descripción / criterios</label><textarea id="req-description" rows="3" maxlength="4000"></textarea></div>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="req-priority">Prioridad</label><select id="req-priority"></select></div>
+                                <div class="form-group"><label for="req-module">Módulo</label><input id="req-module" type="text" maxlength="80"></div>
+                            </div>
+                            <div class="form-group"><label for="req-plan">Plan</label><select id="req-plan"><option value="">Sin plan</option></select></div>
+                            <p id="req-msg" class="form-msg" role="status" aria-live="polite"></p>
+                            <button id="btn-req-save" type="submit" class="btn btn-primary btn-block"><span class="btn-label">Guardar requisito</span></button>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <h3>Requisitos y casos vinculados</h3>
+                        <div class="table-wrapper">
+                            <table id="table-rtm" class="table-wrap">
+                                <thead><tr><th>Requisito</th><th>Descripción</th><th>Casos de prueba</th><th>Defectos</th><th>Cobertura</th><th class="actions-col">Acciones</th></tr></thead>
+                                <tbody><tr><td colspan="6" class="empty">Cargando…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div id="rtm-orphans" class="orphans" hidden></div>
+                    </section>
+                </div>
+            </section>
+
+            <!-- ============================================================ REPORTE DE DEFECTOS -->
+            <section id="view-defectos" class="view" data-view="defectos" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Reporte de defectos</h2>
+                        <p class="muted">Documento para los desarrolladores: pasos de reproducción, resultado esperado vs. obtenido e impacto.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="btn-defects-pdf" type="button" class="btn btn-outline btn-sm"><span class="badge badge-pdf">PDF</span> Reporte</button>
+                        <button id="btn-defects-excel" type="button" class="btn btn-outline btn-sm"><span class="badge badge-excel">XLSX</span></button>
+                        <a href="#novedades" class="btn btn-primary">Gestionar novedades</a>
+                    </div>
+                </div>
+                <div id="defect-stats" class="mini-stats"></div>
+                <section class="panel">
+                    <div class="filters">
+                        <select id="defect-filter-open" aria-label="Estado"><option value="1">Solo abiertos</option><option value="">Todos</option></select>
+                        <select id="defect-filter-severity" aria-label="Severidad"><option value="">Toda severidad</option></select>
+                        <select id="defect-filter-developer" aria-label="Programador"><option value="">Todos los programadores</option></select>
+                        <select id="defect-filter-source" aria-label="Origen"><option value="">Todo origen</option></select>
+                    </div>
+                    <div id="defect-list" class="defect-list"><p class="muted">Cargando…</p></div>
+                </section>
+            </section>
+
+            <!-- ============================================================ REPORTES -->
+            <section id="view-reportes" class="view" data-view="reportes" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Reportes</h2>
+                        <p class="muted">Descarga los reportes para la gerencia o para el equipo de desarrollo.</p>
+                    </div>
+                </div>
+                <section class="grid-2 grid-even">
+                    <article class="panel">
+                        <h3>Ejecuciones de pruebas</h3>
+                        <p class="muted">Reporte ejecutivo con todas las ejecuciones registradas, automáticas e importadas.</p>
+                        <div class="export-buttons">
+                            <button id="btn-export-pdf" type="button" class="btn btn-export" data-format="pdf">
+                                <span class="badge badge-pdf">PDF</span> Informe ejecutivo
+                            </button>
+                            <button id="btn-export-excel" type="button" class="btn btn-export" data-format="excel">
+                                <span class="badge badge-excel">XLSX</span> Libro de Excel
+                            </button>
+                            <button id="btn-export-csv" type="button" class="btn btn-export" data-format="csv">
+                                <span class="badge badge-csv">CSV</span> Datos tabulares
+                            </button>
+                        </div>
+                        <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+                    </article>
+                    <article class="panel">
+                        <h3>Novedades para programadores</h3>
+                        <p class="muted">Listado completo con pasos, resultado esperado y actual. Respeta los filtros de la pantalla Novedades.</p>
+                        <div class="export-buttons">
+                            <button id="btn-export-inc-excel" type="button" class="btn btn-export" data-format="excel">
+                                <span class="badge badge-excel">XLSX</span> Novedades en Excel
+                            </button>
+                            <button id="btn-export-inc-csv" type="button" class="btn btn-export" data-format="csv">
+                                <span class="badge badge-csv">CSV</span> Novedades en CSV
+                            </button>
+                        </div>
+                        <p id="export-inc-status" class="export-status" role="status" aria-live="polite"></p>
+                    </article>
+                    <article class="panel">
+                        <h3>Documentación QA</h3>
+                        <p class="muted">Plan de pruebas, casos, trazabilidad y defectos. El plan se descarga desde su tarjeta.</p>
+                        <div class="export-grid">
+                            <span>Casos de prueba</span>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/test-cases/report" data-format="pdf"><span class="badge badge-pdf">PDF</span></button>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/test-cases/report" data-format="excel"><span class="badge badge-excel">XLSX</span></button>
+                            <span>Matriz de trazabilidad</span>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/rtm/report" data-format="pdf"><span class="badge badge-pdf">PDF</span></button>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/rtm/report" data-format="excel"><span class="badge badge-excel">XLSX</span></button>
+                            <span>Reporte de defectos</span>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/defects/report" data-format="pdf"><span class="badge badge-pdf">PDF</span></button>
+                            <button type="button" class="btn btn-export" data-doc="/api/v1/defects/report" data-format="excel"><span class="badge badge-excel">XLSX</span></button>
+                        </div>
+                        <p id="export-doc-status" class="export-status" role="status" aria-live="polite"></p>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-title-row">
+                            <h3>Reportes automáticos</h3>
+                            <button id="btn-auto-report" type="button" class="btn btn-primary btn-sm"><span class="btn-label">Generar ahora</span></button>
+                        </div>
+                        <p id="auto-report-info" class="muted small"></p>
+                        <ul id="auto-report-list" class="file-list"><li class="muted small">Cargando…</li></ul>
+                        <p id="auto-report-msg" class="form-msg" role="status" aria-live="polite"></p>
+                    </article>
+                </section>
+            </section>
+
+            <!-- ============================================================ CONFIGURACIÓN -->
+            <section id="view-configuracion" class="view" data-view="configuracion" hidden>
+                <div class="section-header">
+                    <div>
+                        <h2>Configuración</h2>
+                        <p class="muted">Automatización y canales para enviar las novedades a los programadores.</p>
+                    </div>
+                </div>
+                <form id="form-settings" novalidate>
+                    <section class="grid-2 grid-even">
+                        <article class="panel">
+                            <h3>Automatización</h3>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="set-monitor-interval">Monitorear cada (min)</label><input id="set-monitor-interval" name="monitor_interval_minutes" type="number" min="1" max="1440"></div>
+                                <div class="form-group"><label for="set-scan-wait">Espera tras cargar (s)</label><input id="set-scan-wait" name="scan_wait_seconds" type="number" min="0" max="30" step="0.5"></div>
+                            </div>
+                            <label class="check"><input id="set-auto-incidents" name="auto_incidents" type="checkbox"> Crear novedades automáticamente con los errores detectados</label>
+                            <label class="check"><input id="set-auto-warnings" name="auto_incident_warnings" type="checkbox"> Incluir advertencias de consola</label>
+                            <label class="check"><input id="set-auto-notify" name="auto_notify" type="checkbox"> Enviar automáticamente al programador responsable</label>
+                            <div class="form-group"><label for="set-base-url">URL pública de QA Center (para los enlaces en los mensajes)</label><input id="set-base-url" name="public_base_url" type="text"></div>
+                            <h3 class="mt">Reporte automático diario</h3>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="set-report-hour">Hora (0-23, vacío = desactivado)</label><input id="set-report-hour" name="report_hour" type="number" min="0" max="23"></div>
+                                <div class="form-group"><label for="set-report-recipients">Enviar a (correos separados por coma)</label><input id="set-report-recipients" name="report_recipients" type="text" placeholder="jefe@empresa.com, dev@empresa.com"></div>
+                            </div>
+                            <p class="muted small">Cada día genera el informe ejecutivo (PDF + Excel con novedades y análisis de URL), lo guarda en «Reportes» y lo envía por correo si configuraste SMTP.</p>
+                        </article>
+                        <article class="panel">
+                            <h3>Webhook (Slack, Teams, Discord)</h3>
+                            <div class="form-group"><label for="set-webhook">URL del webhook entrante</label><input id="set-webhook" name="webhook_url" type="text" placeholder="https://hooks.slack.com/services/…"></div>
+                            <button id="btn-test-webhook" type="button" class="btn btn-outline btn-sm">Enviar mensaje de prueba</button>
+                            <h3 class="mt">Correo (SMTP)</h3>
+                            <div class="form-grid">
+                                <div class="form-group"><label for="set-smtp-host">Servidor</label><input id="set-smtp-host" name="smtp_host" type="text" placeholder="smtp.gmail.com"></div>
+                                <div class="form-group"><label for="set-smtp-port">Puerto</label><input id="set-smtp-port" name="smtp_port" type="text"></div>
+                                <div class="form-group"><label for="set-smtp-user">Usuario</label><input id="set-smtp-user" name="smtp_user" type="text" autocomplete="off"></div>
+                                <div class="form-group"><label for="set-smtp-password">Contraseña</label><input id="set-smtp-password" name="smtp_password" type="password" autocomplete="new-password"></div>
+                                <div class="form-group"><label for="set-smtp-from">Remitente</label><input id="set-smtp-from" name="smtp_from" type="text" placeholder="qa@empresa.com"></div>
+                                <div class="form-group check-cell"><label class="check"><input id="set-smtp-tls" name="smtp_tls" type="checkbox"> Usar STARTTLS</label></div>
+                            </div>
+                            <div class="inline-row">
+                                <input id="set-test-email" type="email" placeholder="correo para la prueba" aria-label="Correo para la prueba">
+                                <button id="btn-test-email" type="button" class="btn btn-outline btn-sm">Probar correo</button>
+                            </div>
+                            <p class="muted small">Sin SMTP ni webhook también puedes enviar cada novedad con tu propio correo («Abrir en mi correo») o copiando el texto.</p>
+                        </article>
+                    </section>
+                    <p id="settings-msg" class="form-msg" role="status" aria-live="polite"></p>
+                    <button id="btn-settings-save" type="submit" class="btn btn-primary"><span class="btn-label">Guardar configuración</span></button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- ============================================================ DIÁLOGOS -->
+    <dialog id="dlg-incident" class="dialog dialog-lg" aria-labelledby="dlg-incident-title">
+        <form id="form-incident" novalidate>
+            <header class="dialog-header">
+                <h3 id="dlg-incident-title">Nueva novedad</h3>
+                <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+            </header>
+            <div class="dialog-body">
+                <input id="inc-id" type="hidden">
+                <div class="form-group"><label for="inc-title">Título</label><input id="inc-title" type="text" maxlength="200" required placeholder="Resumen corto del error"></div>
+                <div class="form-grid form-grid-4">
+                    <div class="form-group"><label for="inc-severity">Severidad</label><select id="inc-severity"></select></div>
+                    <div class="form-group"><label for="inc-priority">Prioridad</label><select id="inc-priority"></select></div>
+                    <div class="form-group"><label for="inc-status">Estado</label><select id="inc-status"></select></div>
+                    <div class="form-group"><label for="inc-environment">Ambiente</label><select id="inc-environment"></select></div>
+                </div>
+                <div class="form-grid form-grid-3">
+                    <div class="form-group"><label for="inc-developer">Asignar a</label><select id="inc-developer"><option value="">Sin asignar</option></select></div>
+                    <div class="form-group"><label for="inc-module">Módulo</label><input id="inc-module" type="text" maxlength="80"></div>
+                    <div class="form-group"><label for="inc-due">Fecha límite</label><input id="inc-due" type="date"></div>
+                </div>
+                <div class="form-group"><label for="inc-url">URL</label><input id="inc-url" type="text" maxlength="500" placeholder="http://localhost:3000/pagina"></div>
+                <div class="form-group"><label for="inc-description">Descripción</label><textarea id="inc-description" rows="3" maxlength="8000"></textarea></div>
+                <div class="form-group"><label for="inc-steps">Pasos para reproducir</label><textarea id="inc-steps" rows="3" maxlength="4000" placeholder="1. …&#10;2. …"></textarea></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="inc-expected">Resultado esperado</label><textarea id="inc-expected" rows="2" maxlength="2000"></textarea></div>
+                    <div class="form-group"><label for="inc-actual">Resultado actual / error</label><textarea id="inc-actual" rows="2" maxlength="4000"></textarea></div>
+                </div>
+                <label id="inc-notify-row" class="check"><input id="inc-notify" type="checkbox"> Enviar al programador al guardar (correo / webhook configurados)</label>
+                <p id="inc-msg" class="form-msg" role="status" aria-live="polite"></p>
+            </div>
+            <footer class="dialog-footer">
+                <button type="button" class="btn btn-outline" data-close>Cancelar</button>
+                <button id="btn-inc-save" type="submit" class="btn btn-primary"><span class="btn-label">Guardar</span></button>
+            </footer>
+        </form>
+    </dialog>
+
+    <dialog id="dlg-detail" class="dialog dialog-lg" aria-labelledby="detail-title">
+        <header class="dialog-header">
+            <div>
+                <p id="detail-code" class="muted small"></p>
+                <h3 id="detail-title"></h3>
+            </div>
+            <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+        </header>
+        <div class="dialog-body">
+            <div id="detail-pills" class="pill-row"></div>
+            <div class="detail-grid">
+                <div>
+                    <div class="quick-row">
+                        <div class="form-group"><label for="detail-status">Estado</label><select id="detail-status"></select></div>
+                        <div class="form-group"><label for="detail-developer">Asignado a</label><select id="detail-developer"><option value="">Sin asignar</option></select></div>
+                    </div>
+                    <dl id="detail-fields" class="detail-fields"></dl>
+                </div>
+                <aside class="share-box">
+                    <h4>Enviar al programador</h4>
+                    <div id="detail-channels" class="channel-list"></div>
+                    <textarea id="detail-note" rows="2" maxlength="2000" placeholder="Nota adicional (opcional)" aria-label="Nota adicional"></textarea>
+                    <button id="btn-detail-send" type="button" class="btn btn-primary btn-block btn-sm">Enviar</button>
+                    <div class="share-alt">
+                        <a id="btn-detail-mailto" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener">Abrir en mi correo</a>
+                        <button id="btn-detail-copy" type="button" class="btn btn-outline btn-sm">Copiar texto</button>
+                    </div>
+                    <p id="detail-share-msg" class="form-msg" role="status" aria-live="polite"></p>
+                </aside>
+            </div>
+            <h4 class="mt">Historial y comentarios</h4>
+            <form id="form-comment" class="inline-row" novalidate>
+                <input id="detail-comment" type="text" maxlength="4000" placeholder="Escribe un comentario o la respuesta del programador…" aria-label="Comentario">
+                <button type="submit" class="btn btn-outline btn-sm">Comentar</button>
+            </form>
+            <ol id="detail-history" class="timeline"></ol>
+        </div>
+        <footer class="dialog-footer">
+            <button id="btn-detail-delete" type="button" class="btn btn-danger">Eliminar</button>
+            <span class="spacer"></span>
+            <button id="btn-detail-edit" type="button" class="btn btn-outline">Editar</button>
+            <button type="button" class="btn btn-primary" data-close>Cerrar</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-cases" class="dialog dialog-lg" aria-labelledby="cases-title">
+        <header class="dialog-header">
+            <h3 id="cases-title">Detalle</h3>
+            <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+        </header>
+        <div class="dialog-body">
+            <p id="cases-meta" class="muted small"></p>
+            <p id="cases-notes" class="notes-box" hidden></p>
+            <ul id="cases-list" class="case-list case-list-tall"></ul>
+        </div>
+        <footer class="dialog-footer">
+            <button id="btn-cases-incident" type="button" class="btn btn-outline">Crear novedades de las fallas</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-primary" data-close>Cerrar</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-plan" class="dialog dialog-lg" aria-labelledby="dlg-plan-title">
+        <form id="form-plan" novalidate>
+            <header class="dialog-header">
+                <h3 id="dlg-plan-title">Nuevo plan de pruebas</h3>
+                <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+            </header>
+            <div class="dialog-body">
+                <input id="plan-id" type="hidden">
+                <div class="form-grid form-grid-4">
+                    <div class="form-group span-2"><label for="plan-name">Nombre del plan</label><input id="plan-name" type="text" maxlength="150" required placeholder="Ej.: Pruebas módulo de facturación"></div>
+                    <div class="form-group"><label for="plan-version">Versión</label><input id="plan-version" type="text" maxlength="20" value="1.0"></div>
+                    <div class="form-group"><label for="plan-status">Estado</label><select id="plan-status"></select></div>
+                    <div class="form-group"><label for="plan-responsible">Responsable</label><input id="plan-responsible" type="text" maxlength="120"></div>
+                    <div class="form-group"><label for="plan-environment">Ambiente</label><select id="plan-environment"></select></div>
+                    <div class="form-group"><label for="plan-start">Inicio</label><input id="plan-start" type="date"></div>
+                    <div class="form-group"><label for="plan-end">Fin</label><input id="plan-end" type="date"></div>
+                </div>
+                <div class="form-group"><label for="plan-objective">Objetivo</label><textarea id="plan-objective" rows="2" maxlength="8000"></textarea></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="plan-scope-in">Alcance (qué se prueba)</label><textarea id="plan-scope-in" rows="3" maxlength="8000"></textarea></div>
+                    <div class="form-group"><label for="plan-scope-out">Fuera de alcance</label><textarea id="plan-scope-out" rows="3" maxlength="8000"></textarea></div>
+                </div>
+                <div class="form-group"><label for="plan-features">Funciones a evaluar</label><textarea id="plan-features" rows="3" maxlength="8000" placeholder="Una por línea"></textarea></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="plan-approach">Estrategia / tipos de prueba</label><textarea id="plan-approach" rows="3" maxlength="8000" placeholder="Funcionales manuales, API con Postman, UI con Selenium…"></textarea></div>
+                    <div class="form-group"><label for="plan-acceptance">Criterios de aceptación / éxito</label><textarea id="plan-acceptance" rows="3" maxlength="8000" placeholder="Ej.: 95 % de casos aprobados y 0 defectos críticos abiertos"></textarea></div>
+                    <div class="form-group"><label for="plan-resources">Recursos necesarios</label><textarea id="plan-resources" rows="3" maxlength="8000" placeholder="Personas, ambientes, datos, herramientas"></textarea></div>
+                    <div class="form-group"><label for="plan-schedule">Cronograma de trabajo</label><textarea id="plan-schedule" rows="3" maxlength="8000" placeholder="Semana 1: diseño de casos…"></textarea></div>
+                </div>
+                <div class="form-group"><label for="plan-risks">Riesgos y contingencias</label><textarea id="plan-risks" rows="2" maxlength="8000"></textarea></div>
+                <p id="plan-msg" class="form-msg" role="status" aria-live="polite"></p>
+            </div>
+            <footer class="dialog-footer">
+                <button type="button" class="btn btn-outline" data-close>Cancelar</button>
+                <button id="btn-plan-save" type="submit" class="btn btn-primary"><span class="btn-label">Guardar plan</span></button>
+            </footer>
+        </form>
+    </dialog>
+
+    <dialog id="dlg-case" class="dialog dialog-lg" aria-labelledby="dlg-case-title">
+        <form id="form-case" novalidate>
+            <header class="dialog-header">
+                <h3 id="dlg-case-title">Nuevo caso de prueba</h3>
+                <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+            </header>
+            <div class="dialog-body">
+                <input id="case-id" type="hidden">
+                <div class="form-group"><label for="case-title">Descripción corta (qué se prueba)</label><input id="case-title" type="text" maxlength="200" required placeholder="Ej.: Login con contraseña incorrecta muestra error"></div>
+                <div class="form-group"><label for="case-description">Propósito</label><textarea id="case-description" rows="2" maxlength="4000"></textarea></div>
+                <div class="form-grid form-grid-4">
+                    <div class="form-group"><label for="case-plan">Plan</label><select id="case-plan"><option value="">Sin plan</option></select></div>
+                    <div class="form-group"><label for="case-module">Módulo</label><input id="case-module" type="text" maxlength="80"></div>
+                    <div class="form-group"><label for="case-type">Tipo</label><select id="case-type"></select></div>
+                    <div class="form-group"><label for="case-priority">Prioridad</label><select id="case-priority"></select></div>
+                    <div class="form-group"><label for="case-tool">Herramienta</label><select id="case-tool"></select></div>
+                    <div class="form-group"><label for="case-environment">Ambiente</label><select id="case-environment"></select></div>
+                    <div class="form-group span-2"><label for="case-url">URL</label><input id="case-url" type="text" maxlength="500" placeholder="http://localhost:3000/login"></div>
+                </div>
+                <fieldset class="req-picker">
+                    <legend>Requisitos / historias que cubre</legend>
+                    <div id="case-requirements" class="req-options"><span class="muted small">No hay requisitos. Créalos en «Matriz de trazabilidad».</span></div>
+                </fieldset>
+                <div class="form-grid">
+                    <div class="form-group"><label for="case-preconditions">Precondiciones</label><textarea id="case-preconditions" rows="3" maxlength="4000" placeholder="Estado necesario del sistema antes de iniciar"></textarea></div>
+                    <div class="form-group"><label for="case-input">Datos de entrada</label><textarea id="case-input" rows="3" maxlength="4000" placeholder="Valores, usuarios, credenciales de prueba"></textarea></div>
+                </div>
+                <div class="form-group"><label for="case-steps">Pasos a seguir</label><textarea id="case-steps" rows="4" maxlength="8000" placeholder="1. Abrir…&#10;2. Ingresar…&#10;3. Pulsar…"></textarea></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="case-expected">Resultado esperado</label><textarea id="case-expected" rows="3" maxlength="4000"></textarea></div>
+                    <div class="form-group"><label for="case-actual">Resultado obtenido</label><textarea id="case-actual" rows="3" maxlength="4000" placeholder="Se completa al ejecutar"></textarea></div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="case-status">Estado</label><select id="case-status"></select></div>
+                    <div class="form-group"><label for="case-evidence-notes">Evidencias / logs (texto)</label><textarea id="case-evidence-notes" rows="2" maxlength="8000" placeholder="Pega logs o enlaces; los archivos se adjuntan en «Ejecutar» o en el detalle"></textarea></div>
+                </div>
+                <p id="case-msg" class="form-msg" role="status" aria-live="polite"></p>
+            </div>
+            <footer class="dialog-footer">
+                <button type="button" class="btn btn-outline" data-close>Cancelar</button>
+                <button id="btn-case-save" type="submit" class="btn btn-primary"><span class="btn-label">Guardar caso</span></button>
+            </footer>
+        </form>
+    </dialog>
+
+    <dialog id="dlg-execute" class="dialog dialog-lg" aria-labelledby="dlg-execute-title">
+        <form id="form-execute" novalidate>
+            <header class="dialog-header">
+                <div>
+                    <p id="exec-code" class="muted small"></p>
+                    <h3 id="dlg-execute-title">Ejecutar caso</h3>
+                </div>
+                <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+            </header>
+            <div class="dialog-body">
+                <dl id="exec-info" class="detail-fields"></dl>
+                <div class="result-picker" role="radiogroup" aria-label="Resultado">
+                    <label class="result-opt result-pass"><input type="radio" name="exec-status" value="Aprobado" checked> ✓ Aprobado</label>
+                    <label class="result-opt result-fail"><input type="radio" name="exec-status" value="Fallido"> ✗ Fallido</label>
+                    <label class="result-opt result-block"><input type="radio" name="exec-status" value="Bloqueado"> ⏸ Bloqueado</label>
+                    <label class="result-opt result-skip"><input type="radio" name="exec-status" value="Omitido"> – Omitido</label>
+                </div>
+                <div class="form-group"><label for="exec-actual">Resultado obtenido</label><textarea id="exec-actual" rows="3" maxlength="4000" placeholder="Qué ocurrió en realidad"></textarea></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="exec-files">Evidencias (capturas, logs, video)</label><input id="exec-files" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.json,.har,.csv,.xml,.html,.mp4,.webm,.zip"></div>
+                    <div class="form-group"><label for="exec-notes">Logs / notas de evidencia</label><textarea id="exec-notes" rows="2" maxlength="8000"></textarea></div>
+                </div>
+                <div id="exec-defect" class="defect-box" hidden>
+                    <label class="check"><input id="exec-create-defect" type="checkbox" checked> Crear el reporte de defecto y enviarlo a Novedades</label>
+                    <div class="form-grid form-grid-3">
+                        <div class="form-group"><label for="exec-severity">Severidad</label><select id="exec-severity"></select></div>
+                        <div class="form-group"><label for="exec-priority">Prioridad</label><select id="exec-priority"></select></div>
+                        <div class="form-group"><label for="exec-developer">Asignar a</label><select id="exec-developer"><option value="">Sin asignar</option></select></div>
+                    </div>
+                </div>
+                <p id="exec-msg" class="form-msg" role="status" aria-live="polite"></p>
+            </div>
+            <footer class="dialog-footer">
+                <button type="button" class="btn btn-outline" data-close>Cancelar</button>
+                <button id="btn-exec-save" type="submit" class="btn btn-primary"><span class="btn-label">Registrar resultado</span></button>
+            </footer>
+        </form>
+    </dialog>
+
+    <dialog id="dlg-case-detail" class="dialog dialog-lg" aria-labelledby="cd-title">
+        <header class="dialog-header">
+            <div>
+                <p id="cd-code" class="muted small"></p>
+                <h3 id="cd-title"></h3>
+            </div>
+            <button type="button" class="btn-icon" data-close aria-label="Cerrar">✕</button>
+        </header>
+        <div class="dialog-body">
+            <div id="cd-pills" class="pill-row"></div>
+            <dl id="cd-fields" class="detail-fields"></dl>
+            <h4 class="mt">Evidencias</h4>
+            <div id="cd-evidence" class="evidence-grid"></div>
+            <form id="form-cd-upload" class="inline-row" novalidate>
+                <input id="cd-files" type="file" multiple aria-label="Adjuntar evidencias" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.json,.har,.csv,.xml,.html,.mp4,.webm,.zip">
+                <button type="submit" class="btn btn-outline btn-sm">Adjuntar</button>
+            </form>
+            <h4 class="mt">Historial de ejecuciones</h4>
+            <ol id="cd-executions" class="timeline"></ol>
+        </div>
+        <footer class="dialog-footer">
+            <button id="btn-cd-pdf" type="button" class="btn btn-outline btn-sm"><span class="badge badge-pdf">PDF</span></button>
+            <button id="btn-cd-excel" type="button" class="btn btn-outline btn-sm"><span class="badge badge-excel">XLSX</span></button>
+            <span class="spacer"></span>
+            <button id="btn-cd-edit" type="button" class="btn btn-outline">Editar</button>
+            <button id="btn-cd-execute" type="button" class="btn btn-primary">Ejecutar</button>
+        </footer>
+    </dialog>
+
+    <dialog id="dlg-confirm" class="dialog dialog-sm" aria-labelledby="confirm-text">
+        <div class="dialog-body"><p id="confirm-text"></p></div>
+        <footer class="dialog-footer">
+            <button id="btn-confirm-no" type="button" class="btn btn-outline">Cancelar</button>
+            <button id="btn-confirm-yes" type="button" class="btn btn-danger">Eliminar</button>
+        </footer>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/results.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/incidents.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/people.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/docs.js') }}"></script>
+</body>
+</html>
