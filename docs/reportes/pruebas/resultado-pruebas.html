@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    html,body{overflow:hidden} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f1f5f9;color:#0f172a}
+    .wrap{width:1100px;padding:36px} h1{margin:0 0 4px;font-size:28px} .muted{color:#64748b}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:24px 0}
+    .card{background:#fff;border-radius:12px;padding:18px 20px;border-top:4px solid #1e3a8a;box-shadow:0 1px 3px #0001}
+    .card b{display:block;font-size:34px} .card span{color:#64748b;font-size:13px;font-weight:600;text-transform:uppercase}
+    .ok{color:#16a34a} .bad{color:#dc2626} .green{border-top-color:#16a34a} .red{border-top-color:#dc2626}
+    .panel{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px #0001;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}
+    th{font-size:12px;color:#64748b;text-transform:uppercase;background:#f8fafc} .n{text-align:right}
+    small{color:#64748b} .bar{height:8px;background:#e2e8f0;border-radius:9px;overflow:hidden;width:160px}
+    .bar div{height:100%;background:#16a34a} ul{list-style:none;margin:0;padding:0}
+    li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:14px}
+    h2{font-size:17px;margin:0 0 12px}</style></head><body><div class="wrap">
+    <h1>QA Center · Resultado de las pruebas automatizadas</h1>
+    <div class="muted">Ejecutado el 2026-10-19 10:58 con pytest · unittest · Selenium</div>
+    <div class="cards">
+      <div class="card"><span>Pruebas</span><b>54</b></div>
+      <div class="card green"><span>Exitosas</span><b class="ok">54</b></div>
+      <div class="card red"><span>Fallidas</span><b class="">0</b></div>
+      <div class="card green"><span>Pass rate</span><b>100 %</b></div>
+    </div>
+    <div class="panel"><h2>Por archivo de pruebas</h2><table>
+      <tr><th>Archivo</th><th class="n">Pruebas</th><th class="n">Exitosas</th><th class="n">Fallidas</th><th class="n">Tiempo</th><th></th></tr>
+      <tr><td><code>test_console_logs.py</code><br><small>Consola y logs</small></td><td class='n'>6</td><td class='n ok'>6</td><td class='n '>0</td><td class='n'>0.6 s</td><td><div class='bar'><div style='width:100%'></div></div></td></tr><tr><td><code>test_system_runner.py</code><br><small>Autopruebas y programador</small></td><td class='n'>9</td><td class='n ok'>9</td><td class='n '>0</td><td class='n'>2.6 s</td><td><div class='bar'><div style='width:100%'></div></div></td></tr><tr><td><code>test_qa_center.py</code><br><small>API: análisis, resultados, novedades, reportes</small></td><td class='n'>21</td><td class='n ok'>21</td><td class='n '>0</td><td class='n'>3.5 s</td><td><div class='bar'><div style='width:100%'></div></div></td></tr><tr><td><code>test_testdocs.py</code><br><small>API: plan, casos, evidencias, trazabilidad, defectos</small></td><td class='n'>7</td><td class='n ok'>7</td><td class='n '>0</td><td class='n'>1.1 s</td><td><div class='bar'><div style='width:100%'></div></div></td></tr><tr><td><code>test_selenium_ui.py</code><br><small>E2E con Selenium (navegador real)</small></td><td class='n'>11</td><td class='n ok'>11</td><td class='n '>0</td><td class='n'>37.8 s</td><td><div class='bar'><div style='width:100%'></div></div></td></tr></table></div>
+    <div class="panel"><h2>Pruebas más largas</h2><ul><li><code>test_11_all_menus_without_console_errors</code><span>10.0 s</span></li><li><code>test_08_scan_url_detects_console_errors</code><span>6.7 s</span></li><li><code>test_10_test_documentation_flow</code><span>5.6 s</span></li><li><code>test_01_full_flow_login_dashboard_export_logout</code><span>4.5 s</span></li><li><code>test_09_incident_crud_from_dialog</code><span>3.5 s</span></li><li><code>test_07_edit_and_delete_registered_result</code><span>2.8 s</span></li></ul></div>
+    </div></body></html>

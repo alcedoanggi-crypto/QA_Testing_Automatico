@@ -49,6 +49,7 @@ class _Pdf:
         self.body = styles["BodyText"].clone("body", fontSize=9, leading=11.5)
         self.cell = styles["BodyText"].clone("cell", fontSize=7.5, leading=9)
         self.cell_bold = self.cell.clone("cell_bold", fontName="Helvetica-Bold")
+        self.stat_style = self.cell.clone("stat", leading=17)
         self.muted = self.body.clone("muted", textColor=colors.HexColor("#64748B"), fontSize=8)
         self.title = title
         self.story = []
@@ -88,7 +89,7 @@ class _Pdf:
 
     def stats(self, pairs):
         cells = [[Paragraph(f'<font size="15"><b>{escape(str(v))}</b></font><br/>'
-                            f'<font size="7" color="#64748B">{escape(k)}</font>', self.cell) for k, v in pairs]]
+                            f'<font size="7" color="#64748B">{escape(k)}</font>', self.stat_style) for k, v in pairs]]
         table = Table(cells, colWidths=[self.width / len(pairs)] * len(pairs))
         table.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.4, GRID), ("INNERGRID", (0, 0), (-1, -1), 0.4, GRID),
                                    ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
