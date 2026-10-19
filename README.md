@@ -26,6 +26,7 @@ Aplicación web (Flask + JavaScript sin frameworks) para el trabajo diario de QA
 | Contraseña | `SecurePassword123` |
 | Guía de aprendizaje (cómo se construyó y su lógica) | [`docs/README.md`](docs/README.md) |
 | Video paso a paso (2 min 30 s) | [`docs/video/qa-center-paso-a-paso.mp4`](docs/video/qa-center-paso-a-paso.mp4) |
+| Video: cómo probar otra aplicación (2 min 15 s) | [`docs/video/qa-center-probar-otra-aplicacion.mp4`](docs/video/qa-center-probar-otra-aplicacion.mp4) |
 
 El video se regenera solo con `pip install imageio imageio-ffmpeg` y `python docs/video/grabar_video.py`
 (usa una base de datos temporal; no toca tus datos).
